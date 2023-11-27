@@ -31,7 +31,7 @@ class colorDetector:
         cv2.createTrackbar('vue max',control_window_name,initial_values[5],255,lambda x:None)
 
 
-    def get_colors(self) -> tuple[int]:
+    def get_colors(self) -> tuple[np.ndarray]:
         """
         a function that reads the values from the trackbar and return them back
         """
@@ -43,7 +43,7 @@ class colorDetector:
         s_max = cv2.getTrackbarPos('sat max',self.control_window_name)
         v_min = cv2.getTrackbarPos('vue min',self.control_window_name)
         v_max = cv2.getTrackbarPos('vue max',self.control_window_name)
-        return h_min,h_max,s_min,s_max,v_min,v_max
+        return np.array([h_min,s_min,v_min]),np.array([h_max,s_max,v_max])
 
 
     def detect_image(self,image_path:str,window_size:tuple[int]) -> None:
@@ -81,11 +81,11 @@ class colorDetector:
 
         while True:
             # get the new values
-            h_min,h_max,s_min,s_max,l_min,l_max = self.get_colors()
+            lower,upper = self.get_colors()
 
 
             # create the mask
-            mask = cv2.inRange(hsv_image_resized,np.array([h_min,s_min,l_min]),np.array([h_max,s_max,l_max]))
+            mask = cv2.inRange(hsv_image_resized,lower,upper)
 
             # apply the mask to the image
             masked_image = cv2.bitwise_and(img_resized,img_resized,mask=mask)
@@ -104,8 +104,70 @@ class colorDetector:
                 break
 
 
+    def detect_video(self,video_path:str) -> None:
+        """
+        this function take the video path and detects the colors in the range specified in the control panel
+        it will display 4 video streams as an overview of what is happening the video which are :
+        1. the original stream
+        2. the hsv version of the stream
+        3. the mask that is being applied in black and white
+        4. the stream after applying the mask
+
+        :param video_path: string of the path of the video that we want to detect colors of alternatively you can also put and integer for a webcam
+        0 will be the defulat built-in webcam and if you have any other pluggen in webcam specify the number
+
+        """
+
+        # get the video capture object
+        capture = cv2.VideoCapture(video_path)
+        
+        # get the dimensions of the video stream
+        window_size = (int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)),int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)))
+
+        # define how much will we shrink each image
+        scaling_factor = 0.5
+
+        # get the size of each image according to the number or rows and columns
+        size_of_one_frame = ( int(window_size[0] * scaling_factor) , int(window_size[1] * scaling_factor))
+
+        # we will continue doing this until the user presses q or the video stream ends
+        while True:
+            # get the frame
+            ret , frame = capture.read()
+            # if reading wasn't successful we break from the loop
+            if not ret:
+                break
+
+            # resize image to be the size of one frame
+            frame = cv2.resize(frame,size_of_one_frame[::-1])
+
+            # convert to hsv
+            hsv_frame = cv2.cvtColor(frame,cv2.COLOR_BGR2HSV)
+
+            # get the new values
+            lower,upper = self.get_colors()
+
+            # create the mask
+            mask = cv2.inRange(hsv_frame,lower,upper)
+
+            # apply the mask to the image
+            masked_image = cv2.bitwise_and(frame,frame,mask=mask)
+
+
+
+            # display the images
+            final = np.vstack((np.hstack((frame,hsv_frame)),np.hstack((masked_image,cv2.cvtColor(mask,cv2.COLOR_GRAY2BGR)))))
+            cv2.imshow('images',final)
+
+            if cv2.waitKey(1) == ord('q'):
+                break
+
+        capture.release()
+
+
 
 if __name__ == "__main__":
     cd = colorDetector('control')
-    cd.detect_image(sys.argv[1],(600,800))
+    # cd.detect_image(sys.argv[1],(600,800))
+    cd.detect_video(sys.argv[1])
     cv2.destroyAllWindows()
