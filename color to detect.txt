@@ -1,0 +1,20 @@
+these values are in HSV format
+
+
+
+red pen:
+H: 160-179
+S: 60 - 255
+V: 90 - 255
+
+
+green pen:
+H: 65 - 88
+S: 71 - 255
+V: 68 - 255
+
+gray pen:
+H: 89 - 179
+S: 0 - 50
+V: 68 - 143
+
