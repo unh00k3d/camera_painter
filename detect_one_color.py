@@ -169,5 +169,8 @@ class colorDetector:
 if __name__ == "__main__":
     cd = colorDetector('control')
     # cd.detect_image(sys.argv[1],(600,800))
-    cd.detect_video(sys.argv[1])
+    try:
+        cd.detect_video(int(sys.argv[1]))
+    except ValueError:
+        cd.detect_video(sys.argv[1])
     cv2.destroyAllWindows()
