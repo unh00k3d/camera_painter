@@ -2,7 +2,7 @@ import cv2
 import sys
 import numpy as np
 
-class colorDetector:
+class colorDetectorAdjustable:
 
     def __init__(self,control_window_name:str,color_count:int = 1,initial_values:np.ndarray = None):
         """
