@@ -4,7 +4,7 @@ import numpy as np
 
 class colorDetector:
 
-    def __init__(self,control_window_name:str,initial_values:np.ndarray = None):
+    def __init__(self,control_window_name:str,color_count:int = 1,initial_values:np.ndarray = None):
         """
         create the trackbars and so on to start detecting colors
         :param initial_values: a 1-D numpy array that contains the initial values in the order (hue min,hue max,sat min,sat max,vue min, vue max)
@@ -12,38 +12,49 @@ class colorDetector:
         :sub-param hue min/max: value between 0 and 179
         :sub-param sat min/max: value between 0 and 255
         :sub-param vue min/max: value between 0 and 255
+
+        :param color_count: the number of colors that we want to detect (default is 1)
         :return this function returns nothing
         """
         self.control_window_name = control_window_name
+        self.color_count = color_count
 
         # if no value is given we set them ourselves
         if initial_values is None:
-            initial_values = np.array([0,179,0,255,0,255])
+            initial_values = np.array([[0,179,0,255,0,255] for _ in range(color_count)])
         
         # create a windows for controling the color that we want to detect
         cv2.namedWindow(control_window_name)
         # each time any parameter is updated the show_colors function will be called and it will update the image that show the color gradient accordingly
-        cv2.createTrackbar('hue min',control_window_name,initial_values[0],179,lambda x : None)
-        cv2.createTrackbar('hue max',control_window_name,initial_values[1],179,lambda x:None)
-        cv2.createTrackbar('sat min',control_window_name,initial_values[2],255,lambda x:None)
-        cv2.createTrackbar('sat max',control_window_name,initial_values[3],255,lambda x:None)
-        cv2.createTrackbar('vue min',control_window_name,initial_values[4],255,lambda x:None)
-        cv2.createTrackbar('vue max',control_window_name,initial_values[5],255,lambda x:None)
+        for i in range(color_count):
+
+            cv2.createTrackbar(f'{i} hue min',control_window_name,initial_values[i][0],179,lambda x : None)
+            cv2.createTrackbar(f'{i} hue max',control_window_name,initial_values[i][1],179,lambda x:None)
+            cv2.createTrackbar(f'{i} sat min',control_window_name,initial_values[i][2],255,lambda x:None)
+            cv2.createTrackbar(f'{i} sat max',control_window_name,initial_values[i][3],255,lambda x:None)
+            cv2.createTrackbar(f'{i} vue min',control_window_name,initial_values[i][4],255,lambda x:None)
+            cv2.createTrackbar(f'{i} vue max',control_window_name,initial_values[i][5],255,lambda x:None)
 
 
-    def get_colors(self) -> tuple[np.ndarray]:
+    def get_colors(self) -> list[tuple[np.ndarray]]:
         """
         a function that reads the values from the trackbar and return them back
         """
 
-        # get the new values
-        h_min = cv2.getTrackbarPos('hue min',self.control_window_name)
-        h_max = cv2.getTrackbarPos('hue max',self.control_window_name)
-        s_min = cv2.getTrackbarPos('sat min',self.control_window_name)
-        s_max = cv2.getTrackbarPos('sat max',self.control_window_name)
-        v_min = cv2.getTrackbarPos('vue min',self.control_window_name)
-        v_max = cv2.getTrackbarPos('vue max',self.control_window_name)
-        return np.array([h_min,s_min,v_min]),np.array([h_max,s_max,v_max])
+        result = []
+
+        for i in range(self.color_count):
+
+            # get the new values
+            h_min = cv2.getTrackbarPos(f'{i} hue min',self.control_window_name)
+            h_max = cv2.getTrackbarPos(f'{i} hue max',self.control_window_name)
+            s_min = cv2.getTrackbarPos(f'{i} sat min',self.control_window_name)
+            s_max = cv2.getTrackbarPos(f'{i} sat max',self.control_window_name)
+            v_min = cv2.getTrackbarPos(f'{i} vue min',self.control_window_name)
+            v_max = cv2.getTrackbarPos(f'{i} vue max',self.control_window_name)
+            result.append((np.array([h_min,s_min,v_min]),np.array([h_max,s_max,v_max])))
+        
+        return result
 
 
     def detect_image(self,image_path:str,window_size:tuple[int]) -> None:
@@ -76,26 +87,35 @@ class colorDetector:
         hsv_image_resized = cv2.resize(hsv_image,size_of_one_image[::-1])
 
         # for more responsiveness i will concatenate the original and hsv version since they will no change
-        concatenated_original_hsv_image  = np.hstack((img_resized,hsv_image_resized))
-
-
+        original_stacked  = np.hstack((img_resized,hsv_image_resized))
         while True:
             # get the new values
-            lower,upper = self.get_colors()
+            values = self.get_colors()
 
-
-            # create the mask
-            mask = cv2.inRange(hsv_image_resized,lower,upper)
-
-            # apply the mask to the image
+            # initialize a value for the the mask_final variable to updated automatically later
+            mask = cv2.inRange(hsv_image_resized,values[0][0],values[0][1])
             masked_image = cv2.bitwise_and(img_resized,img_resized,mask=mask)
+            mask_stacked = np.hstack((masked_image,cv2.cvtColor(mask,cv2.COLOR_GRAY2BGR)))
 
-            mask = cv2.cvtColor(mask,cv2.COLOR_GRAY2BGR)
+            # add any other color masks if any
+            for lower,upper in values[1:]:
 
-            final = np.vstack((concatenated_original_hsv_image,np.hstack((masked_image,mask))))
+                # create the mask
+                mask = cv2.inRange(hsv_image_resized,lower,upper)
+
+                # apply the mask to the image
+                masked_image = cv2.bitwise_and(img_resized,img_resized,mask=mask)
+
+                mask_stacked = np.vstack((mask_stacked,np.hstack((masked_image,cv2.cvtColor(mask,cv2.COLOR_GRAY2BGR)))))
+
             
 
+            # combine 
+            final = np.vstack((original_stacked,mask_stacked))
+
+            
             cv2.imshow('images',final)
+
 
 
             # quit if the user presses q
@@ -145,18 +165,24 @@ class colorDetector:
             hsv_frame = cv2.cvtColor(frame,cv2.COLOR_BGR2HSV)
 
             # get the new values
-            lower,upper = self.get_colors()
+            values = self.get_colors()
 
-            # create the mask
-            mask = cv2.inRange(hsv_frame,lower,upper)
+            original_stacked = np.hstack((frame,hsv_frame))
 
-            # apply the mask to the image
+            # initialize a value for the the mask_final variable to updated automatically later
+            mask = cv2.inRange(hsv_frame,values[0][0],values[0][1])
             masked_image = cv2.bitwise_and(frame,frame,mask=mask)
+            mask_stacked = np.hstack((masked_image,cv2.cvtColor(mask,cv2.COLOR_GRAY2BGR)))
 
+            for lower,upper in values[1:]:
+                mask = cv2.inRange(hsv_frame,lower,upper)
 
+                masked_image = cv2.bitwise_and(frame,frame,mask = mask)
 
-            # display the images
-            final = np.vstack((np.hstack((frame,hsv_frame)),np.hstack((masked_image,cv2.cvtColor(mask,cv2.COLOR_GRAY2BGR)))))
+                mask_stacked = np.vstack((mask_stacked,np.hstack((masked_image,cv2.cvtColor(mask,cv2.COLOR_GRAY2BGR)))))
+            
+            # display the streams
+            final = np.vstack((original_stacked,mask_stacked))
             cv2.imshow('images',final)
 
             if cv2.waitKey(1) == ord('q'):
@@ -167,10 +193,10 @@ class colorDetector:
 
 
 if __name__ == "__main__":
-    cd = colorDetector('control')
-    # cd.detect_image(sys.argv[1],(600,800))
-    try:
-        cd.detect_video(int(sys.argv[1]))
-    except ValueError:
-        cd.detect_video(sys.argv[1])
+    cd = colorDetector('control',color_count=int(sys.argv[2]))
+    cd.detect_image(sys.argv[1],(600,800))
+    # try:
+    #     cd.detect_video(int(sys.argv[1]))
+    # except ValueError:
+    #     cd.detect_video(sys.argv[1])
     cv2.destroyAllWindows()
