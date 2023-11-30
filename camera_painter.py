@@ -1,8 +1,41 @@
+
+
 import numpy as np
 import cv2
 
-def main():
 
+
+
+
+CONTINUE = True
+
+
+
+def color_detector(
+        scaling_factor:float,
+        circle_radius:int,
+        ranges:list[tuple[np.ndarray]],
+        painting_colors:list[tuple[int]]
+    ) -> tuple[np.ndarray]:
+    """
+    this function is a generator function meaning that it will continue returning values until it stops and that all happens with
+    a single function call
+    it return an iterator object that will yield values all the time until it is stopped
+
+
+
+    this function takes some parameters as inputs and detects the pen and draws onto a canvas 
+
+    :param scaling_factor: how much do you want to scale the frame down or up
+    :param circle_radius: what is the radius of the circle that you want to draw on the screen like a paint
+    :param ranges: a list of (lower,upper) pairs each as a color range to detect a color NOTE: values are in HSV format
+    :param painting_color: a list of (B,G,R) values to draw on the screen NOTE: it should in BGR format and should have the same order of ranges
+
+    :return this function return three images in the order frame,canvas,result
+        frame: original frame captures by video stream
+        canvas: a canvas where the painting is occuring NOTE: it has a black background
+        result: an overlay of the frame and the canvas i.e. drawing on top of the frame
+    """
 
     scaling_factor = 0.25 # change this
     circle_radius = 5 # change this
@@ -38,7 +71,7 @@ def main():
 
 
     # start capturing stream
-    while True:
+    while CONTINUE:
 
         # read the frame and success signal from the capture object
         ret, frame = capture.read()
@@ -141,14 +174,8 @@ def main():
             result = cv2.add(canvas,background)
 
 
-            cv2.imshow('frame',frame)
-            cv2.imshow('result',result)
-            cv2.imshow('canvas',canvas)
-
-            if cv2.waitKey(1) == ord('q'):
-                break
-
-            
+            yield frame,canvas,result
+ 
     capture.release()
 
 
@@ -156,6 +183,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    color_detector()
     cv2.destroyAllWindows()
 
