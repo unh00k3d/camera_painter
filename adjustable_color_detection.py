@@ -193,7 +193,7 @@ class colorDetectorAdjustable:
 
 
 if __name__ == "__main__":
-    cd = colorDetector('control',color_count=int(sys.argv[2]))
+    cd = colorDetectorAdjustable('control',color_count=int(sys.argv[2]))
     cd.detect_image(sys.argv[1],(600,800))
     # try:
     #     cd.detect_video(int(sys.argv[1]))
