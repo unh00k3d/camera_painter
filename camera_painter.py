@@ -1,11 +1,5 @@
-
-
 import numpy as np
 import cv2
-
-
-
-
 
 CONTINUE = True
 
@@ -36,24 +30,6 @@ def color_detector(
         canvas: a canvas where the painting is occuring NOTE: it has a black background
         result: an overlay of the frame and the canvas i.e. drawing on top of the frame
     """
-
-    scaling_factor = 0.25 # change this
-    circle_radius = 5 # change this
-
-    # define the ranges of the colors you want to detect in the form (lower,upper) for lower and higher bound of the color range
-    ranges=  [
-        (np.array([160,60,90]),np.array([179,255,255])), # (lower , upper)
-        (np.array([65,71,36]),np.array([88,255,255])),
-
-    ]
-    painting_colors = [
-        (0,0,255),  #BGR
-        (0,255,0)
-    ]
-
-    # drawn image canvas
-
-
 
     capture = cv2.VideoCapture(0)
     ret , frame = capture.read()
@@ -175,14 +151,9 @@ def color_detector(
 
 
             yield frame,canvas,result
+
+
+    print("stopping webcam")
  
     capture.release()
-
-
-
-
-
-if __name__ == "__main__":
-    color_detector()
     cv2.destroyAllWindows()
-
